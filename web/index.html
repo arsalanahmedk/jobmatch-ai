@@ -305,6 +305,7 @@
     padding: 16px 14px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 6px;
     transition: border-color 200ms ease, box-shadow 200ms ease;
   }
@@ -347,7 +348,7 @@
   @keyframes march { to { background-position: 10px 0; } }
 
   /* Score ring inside the engine node */
-  .ring-box { position: relative; width: 132px; height: 132px; margin: 6px auto 2px; display: grid; place-items: center; }
+  .ring-box { position: relative; width: 140px; height: 140px; margin: 6px auto 2px; display: grid; place-items: center; }
   .ring { transform: rotate(-90deg); }
   .ring .track { stroke: #262626; }
   .ring .value { transition: stroke-dashoffset 0.9s ease, stroke 0.3s ease; }
@@ -357,7 +358,7 @@
   }
   .ring-score { font-family: var(--font-mono); font-size: 30px; font-weight: 700; line-height: 1; }
   .ring-score small { font-size: 14px; color: var(--muted); }
-  .ring-verdict { margin-top: 3px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .ring-verdict { margin-top: 4px; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; line-height: 1.45; max-width: 100px; }
 
   /* Tool cards (right column) */
   .tools { display: flex; flex-direction: column; gap: 12px; }
@@ -383,7 +384,7 @@
     color: var(--muted);
   }
   .tool p.note { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-  .tool .chips { margin-top: 10px; }
+  .tool .chips { margin-top: 10px; max-height: 112px; overflow-y: auto; }
   .tool .summary-line { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-top: 8px; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 7px; list-style: none; margin: 0; padding: 0; }
@@ -657,11 +658,11 @@
             <span class="node-tag">Match engine · scoring</span>
             <h3>Score</h3>
             <div class="ring-box">
-              <svg class="ring" width="132" height="132" viewBox="0 0 132 132" role="img" aria-labelledby="ring-title ring-desc">
+              <svg class="ring" width="140" height="140" viewBox="0 0 140 140" role="img" aria-labelledby="ring-title ring-desc">
                 <title id="ring-title">Match score gauge</title>
                 <desc id="ring-desc">Circular gauge showing the resume-to-job match score out of 100.</desc>
-                <circle class="track" cx="66" cy="66" r="52" fill="none" stroke-width="10"></circle>
-                <circle class="value" id="ring-value" cx="66" cy="66" r="52" fill="none" stroke="#3B82F6" stroke-width="10" stroke-linecap="round"></circle>
+                <circle class="track" cx="70" cy="70" r="60" fill="none" stroke-width="10"></circle>
+                <circle class="value" id="ring-value" cx="70" cy="70" r="60" fill="none" stroke="#3B82F6" stroke-width="10" stroke-linecap="round"></circle>
               </svg>
               <div class="ring-center">
                 <span class="ring-score"><span id="score-num">--</span><small> / 100</small></span>
@@ -781,7 +782,7 @@
 (function () {
   "use strict";
 
-  var RING_R = 52;
+  var RING_R = 60;
   var RING_C = 2 * Math.PI * RING_R;
 
   var resumeEl = document.getElementById("resume");
@@ -863,7 +864,10 @@
     ring.setAttribute("aria-label", "Match score " + score + " out of 100, " + result.verdict);
 
     document.getElementById("score-num").textContent = score;
-    document.getElementById("verdict").textContent = result.verdict;
+    /* Two-line verdict so the label never touches the ring arc. The
+       verdict comes from a fixed server-side enum, never user input. */
+    document.getElementById("verdict").innerHTML =
+      result.verdict.toUpperCase().split(" ").join("<br>");
     document.getElementById("engine-sub").textContent =
       score + " / 100 — " + result.verdict.toLowerCase();
 

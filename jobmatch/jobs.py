@@ -9,6 +9,7 @@ yields no jobs instead of failing the request. Results are cached in
 memory for 10 minutes per skill set.
 """
 
+import html
 import json
 import re
 import time
@@ -36,11 +37,41 @@ def _fetch_json(url):
         return None
 
 
-def _clean_text(html_or_text):
-    """Strip HTML tags and collapse whitespace."""
-    text = re.sub(r"<[^>]+>", " ", html_or_text or "")
+def _fix_mojibake(text):
+    """Repair UTF-8 text that was decoded as Latin-1 (e.g. "â€" -> "—").
+
+    Some feeds serve UTF-8 bytes behind a Latin-1 decode; re-encoding
+    as Latin-1 recovers the original bytes. Text with no mojibake
+    markers is left untouched.
+    """
+    if not any(ch in text for ch in "âÃÂ"):
+        return text
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        try:
+            return text.encode("latin-1", "ignore").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return text
+
+
+def _clean_text(html_or_text, limit=180):
+    """Clean feed text: decode entities, strip tags and URLs, fix mojibake.
+
+    Truncates at a word boundary with an ellipsis when over ``limit``
+    characters, so excerpts never end mid-word.
+    """
+    text = html.unescape(html_or_text or "")
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"https?://\S+", " ", text)
+    text = re.sub(r"\(\s*\)", " ", text)
+    text = _fix_mojibake(text)
+    text = text.replace("\u00a0", " ")
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"\s+([.,!?:;])", r"\1", text)
+    if len(text) > limit:
+        cut = text[:limit].rsplit(" ", 1)[0].strip()
+        text = (cut or text[:limit].strip()) + "…"
     return text
 
 
@@ -58,11 +89,11 @@ def normalize_arbeitnow(raw):
     """Normalize one Arbeitnow job dict, or None when it is unusable."""
     if not isinstance(raw, dict):
         return None
-    title = (raw.get("title") or "").strip()
+    title = _clean_text(raw.get("title"), limit=90)
     url = (raw.get("url") or "").strip()
     if not title or not url:
         return None
-    description = _clean_text(raw.get("description"))
+    description = _clean_text(raw.get("description"), limit=180)
     location = (raw.get("location") or "").strip()
     if not location and raw.get("remote"):
         location = "Remote"
@@ -75,11 +106,11 @@ def normalize_arbeitnow(raw):
         posted = str(posted)
     return {
         "title": title,
-        "company": (raw.get("company_name") or "").strip(),
+        "company": _clean_text(raw.get("company_name"), limit=60),
         "location": location,
         "url": url,
         "tags": [str(t) for t in (raw.get("tags") or [])],
-        "snippet": description[:220],
+        "snippet": description,
         "posted_at": posted,
         "source": "Arbeitnow",
     }
@@ -93,11 +124,11 @@ def normalize_remoteok(raw):
     """
     if not isinstance(raw, dict) or "position" not in raw:
         return None
-    title = (raw.get("position") or "").strip()
+    title = _clean_text(raw.get("position"), limit=90)
     url = (raw.get("url") or "").strip()
     if not title or not url:
         return None
-    description = _clean_text(raw.get("description"))
+    description = _clean_text(raw.get("description"), limit=180)
     salary = ""
     low = raw.get("salary_min")
     high = raw.get("salary_max")
@@ -107,11 +138,11 @@ def normalize_remoteok(raw):
         salary = "from $%s" % f"{int(low):,}"
     return {
         "title": title,
-        "company": (raw.get("company") or "").strip(),
-        "location": (raw.get("location") or "").strip(),
+        "company": _clean_text(raw.get("company"), limit=60),
+        "location": _clean_text(raw.get("location"), limit=60),
         "url": url,
         "tags": [str(t) for t in (raw.get("tags") or [])],
-        "snippet": description[:220],
+        "snippet": description,
         "posted_at": str(raw.get("date") or ""),
         "source": "RemoteOK",
         "salary": salary,

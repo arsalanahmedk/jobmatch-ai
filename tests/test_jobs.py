@@ -14,6 +14,45 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from jobmatch import jobs
 
 
+class TestCleanText(unittest.TestCase):
+    def test_decodes_html_entities(self):
+        self.assertEqual(
+            jobs._clean_text("A&nbsp;B &amp; C"), "A B & C"
+        )
+
+    def test_fixes_mojibake_em_dash_and_nbsp(self):
+        # UTF-8 em dash and NBSP decoded as Latin-1 by the feed.
+        self.assertEqual(
+            jobs._clean_text("ML Inference Engineer â\x80\x94 Terminal-Bench"),
+            "ML Inference Engineer — Terminal-Bench",
+        )
+        self.assertEqual(
+            jobs._clean_text("searching for anÂ\xa0AI/ML Engineer!"),
+            "searching for an AI/ML Engineer!",
+        )
+
+    def test_strips_raw_urls_and_empty_parens(self):
+        cleaned = jobs._clean_text(
+            "Data ( https://addepto.com/ai-consulting/ ) and engineering"
+        )
+        self.assertNotIn("http", cleaned)
+        self.assertNotIn("()", cleaned)
+        self.assertEqual(cleaned, "Data and engineering")
+
+    def test_truncates_at_word_boundary_with_ellipsis(self):
+        long_text = ("lorem ipsum dolor sit amet " * 20).strip()
+        cleaned = jobs._clean_text(long_text, limit=60)
+        self.assertTrue(cleaned.endswith("…"))
+        self.assertLessEqual(len(cleaned), 61)
+        # The last word before the ellipsis is a whole word, never cut.
+        self.assertIn(cleaned[:-1].rstrip().split()[-1],
+                      {"lorem", "ipsum", "dolor", "sit", "amet"})
+        self.assertNotIn("…", cleaned[:-1])
+
+    def test_short_text_is_unchanged(self):
+        self.assertEqual(jobs._clean_text("Build APIs with Python."), "Build APIs with Python.")
+
+
 class TestNormalizeArbeitnow(unittest.TestCase):
     def test_basic_job(self):
         raw = {
@@ -76,6 +115,29 @@ class TestNormalizeRemoteok(unittest.TestCase):
     def test_legal_notice_item_is_skipped(self):
         # RemoteOK's first list item has no "position" key.
         self.assertIsNone(jobs.normalize_remoteok({"legal": "notice"}))
+
+    def test_messy_feed_text_is_cleaned(self):
+        # Mojibake title, &nbsp; entity, inline URL and a long excerpt.
+        raw = {
+            "position": "ML Inference Engineer â\x80\x94 Terminal-Bench",
+            "company": "Toptal",
+            "location": "Remote",
+            "url": "https://remoteok.com/remote-jobs/5",
+            "tags": ["Python"],
+            "description": (
+                "We are searching for anÂ\xa0AI/ML Engineer! "
+                "See https://example.com/role for the full spec. "
+                + "Great role with real impact. " * 12
+            ),
+            "date": "2026-11-12T00:00:00+00:00",
+        }
+        job = jobs.normalize_remoteok(raw)
+        self.assertEqual(job["title"], "ML Inference Engineer — Terminal-Bench")
+        self.assertNotIn("Â", job["snippet"])
+        self.assertNotIn("&nbsp;", job["snippet"])
+        self.assertNotIn("http", job["snippet"])
+        self.assertTrue(job["snippet"].endswith("…"))
+        self.assertLessEqual(len(job["snippet"]), 181)
 
 
 class TestSkillMatching(unittest.TestCase):
