@@ -289,7 +289,7 @@
   .pipe-body { padding: 22px 20px 20px; }
   .pipe-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     gap: 20px;
     align-items: stretch;
   }
@@ -360,8 +360,8 @@
   .ring-score small { font-size: 14px; color: var(--muted); }
   .ring-verdict { margin-top: 4px; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; line-height: 1.45; max-width: 100px; }
 
-  /* Tool cards (right column) */
-  .tools { display: flex; flex-direction: column; gap: 12px; }
+  /* Tool cards (row under the flow — side-by-side, not a tall side column) */
+  .tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .tool {
     flex: 1;
     background: var(--card-2);
@@ -536,6 +536,7 @@
   /* ---------- Responsive ---------- */
   @media (max-width: 900px) {
     .pipe-grid { grid-template-columns: 1fr; }
+    .tools { grid-template-columns: 1fr; }
     .flow { flex-direction: column; }
     .connector {
       flex: 0 0 26px;
