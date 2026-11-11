@@ -1,0 +1,6 @@
+# Core matcher (jobmatch/) is standard library only — nothing to install.
+# The web UI (app.py) needs FastAPI + Uvicorn — install in a virtualenv:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+fastapi>=0.110
+uvicorn>=0.29

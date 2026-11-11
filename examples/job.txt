@@ -1,0 +1,32 @@
+AI/ML Engineer — Remote (Full-time)
+
+We are hiring an AI/ML Engineer to build production AI features for a
+global, fully remote team. You will own features end to end: from model
+selection and prompt design to API integration and shipping.
+
+Responsibilities
+- Build and maintain AI pipelines using LLM APIs, prompt engineering and
+  evaluation loops.
+- Integrate and evaluate models — LLMs, diffusion models and classic
+  machine learning models.
+- Build REST APIs (FastAPI) that serve AI features to our web product.
+- Work with vector databases and RAG pipelines to ground model output in
+  real data.
+- Write clean, tested Python and review code on GitHub.
+
+Requirements
+- Strong Python programming skills.
+- Hands-on experience with PyTorch or TensorFlow.
+- Experience with LLM APIs and prompt engineering.
+- Familiarity with Hugging Face and Transformers.
+- Solid understanding of machine learning and natural language processing.
+- Experience with REST APIs and SQL databases.
+- Git and GitHub workflow; Docker experience is a plus.
+- Cloud experience (AWS or Google Cloud) is a plus.
+- Experience with LangChain and RAG is a plus.
+
+Nice to have
+- Computer vision experience (OpenCV).
+- Web scraping experience for building datasets.
+- MLOps / CI/CD experience.
+- A public GitHub profile with real projects.

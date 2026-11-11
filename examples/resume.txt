@@ -1,0 +1,32 @@
+Arsalan Ahmed Khan
+AI Student — PAF-IAST (Pak-Austria Fachhochschule)
+Email: arsalanahmeda813@gmail.com | GitHub: github.com/arsalanahmedk
+LinkedIn: linkedin.com/in/arsalan-ahmed-khan-b4a9a2310
+
+Education
+Bachelor's in Artificial Intelligence (in progress, expected October 2027)
+PAF-IAST — Pak-Austria Fachhochschule: Institute of Applied Sciences
+and Technology, Pakistan
+
+Skills
+Python, JavaScript, Machine Learning, Deep Learning, Natural Language
+Processing (NLP), PyTorch, TensorFlow, scikit-learn, Hugging Face, LLM APIs,
+OpenAI API, Transformers, Git, GitHub, Web Scraping, REST APIs, SQL, HTML,
+CSS, FastAPI, Linux, Pandas, NumPy, OpenCV
+
+Projects
+TruthLens — Deepfake image and audio detection system using PyTorch and
+computer vision / audio models.
+Fake News Detection System — Machine learning and NLP classifier that labels
+news as fake or real (scikit-learn, Pandas).
+Social Video Downloader — Live web product (socialvideodownloader.online)
+for downloading social media video posts; built with Python and JavaScript.
+Web Scrapers — Python scrapers (BeautifulSoup, Selenium) that extract
+structured data from websites into CSV / Excel files.
+PoliteAI — Final Year Project: AI-based freelancer communication assistant
+(web app + browser extension) using LLM APIs and politeness theory.
+GlobalHire AI — Smart job and internship aggregator SaaS (in development).
+
+Interests
+Remote AI/ML, Python and web development roles. Building trustworthy AI,
+not just impressive AI.
