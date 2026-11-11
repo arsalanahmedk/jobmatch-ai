@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- File readers for resume upload (CDN, loaded only for parsing files). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   /* Design language: 21st.dev "AI Agent Pipeline" (Monolyth Dev).
      Near-black card, electric-blue glow, monospace labels + live log.
@@ -213,6 +216,19 @@
     font-family: var(--font-mono);
   }
   .field .meta .err { color: var(--red); font-weight: 600; font-family: var(--font-ui); }
+
+  .upload-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .btn-mini {
+    min-height: 34px;
+    padding: 0 13px;
+    font-size: 13px;
+    background: var(--card-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .btn-mini:hover:not(:disabled) { border-color: var(--blue); }
+  .upload-name { font-size: 12.5px; color: var(--faint); }
 
   .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
   button {
@@ -455,6 +471,45 @@
   .export-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
   .copy-ok { color: var(--green); font-size: 14px; align-self: center; font-weight: 600; }
 
+  /* ---------- Live jobs ---------- */
+  .jobs-card { margin-top: 20px; padding: 22px; }
+  .jobs-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .jobs-head .left { display: flex; align-items: center; gap: 9px; }
+  .jobs-head h3 { margin: 0; font-size: 17px; font-weight: 700; }
+  .jobs-head .right { display: flex; align-items: center; gap: 12px; }
+  .jobs-card .note { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
+  .jobs-status { margin-top: 16px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+  .jobs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .job {
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 150ms ease;
+  }
+  .job:hover { border-color: var(--blue); }
+  .job-title { font-size: 15.5px; font-weight: 700; color: var(--text); text-decoration: none; line-height: 1.35; }
+  .job-title:hover { color: var(--blue-bright); text-decoration: underline; }
+  .job-meta { font-size: 13px; color: var(--muted); }
+  .job .chips { margin-top: 4px; }
+  .job-foot {
+    display: flex; justify-content: space-between; gap: 8px;
+    margin-top: auto;
+    padding-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--faint);
+  }
+  .job-foot .apply { color: var(--blue-bright); font-weight: 600; }
+
   /* ---------- How it works ---------- */
   .how { margin: 36px 0 48px; padding: 22px 24px; }
   .how h2 { margin: 0 0 8px; font-size: 18px; }
@@ -498,6 +553,7 @@
   @media (max-width: 768px) {
     .inputs { grid-template-columns: 1fr; }
     .panels { grid-template-columns: 1fr; }
+    .jobs-grid { grid-template-columns: 1fr; }
     .hero { padding-top: 44px; }
     .workbench { padding: 18px; }
     .site-nav .nav-how { display: none; }
@@ -549,6 +605,11 @@
         <p class="hint">Paste the full text of your resume — plain text works best.</p>
         <textarea id="resume" rows="12" placeholder="Paste your resume text here…" spellcheck="false"></textarea>
         <div class="meta"><span class="count" id="resume-count">0 characters</span><span class="err" id="resume-err" role="alert"></span></div>
+        <div class="upload-row">
+          <button type="button" class="btn-mini" id="upload-btn">Upload resume file</button>
+          <span class="upload-name" id="upload-name">PDF, DOCX or TXT — the text is extracted into the box above</span>
+          <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.md" hidden>
+        </div>
       </div>
       <div class="field">
         <label for="job"><span class="num">02 /</span> Job description</label>
@@ -677,6 +738,19 @@
         <p class="note">Concrete suggestions generated from the gaps above.</p>
         <ol class="suggest-list" id="suggest-list"></ol>
       </div>
+    </div>
+
+    <div class="card jobs-card" id="jobs-card">
+      <div class="jobs-head">
+        <div class="left"><span class="dot live"></span><h3>Live jobs for your skills</h3></div>
+        <div class="right">
+          <span class="mono" id="jobs-updated">—</span>
+          <button type="button" class="btn-ghost btn-small" id="jobs-refresh">Refresh</button>
+        </div>
+      </div>
+      <p class="note">Fresh from live job boards, matched to the skills in your resume. Links open the posting on the site itself — you apply there.</p>
+      <div class="jobs-status" id="jobs-status">Run a match to search live jobs.</div>
+      <div class="jobs-grid" id="jobs-grid"></div>
     </div>
 
     <div class="export-row">
@@ -858,6 +932,10 @@
     logLine("match complete — score " + score + "/100 (" + result.verdict.toLowerCase() + ") in " + ms + "ms.", "ok-line");
     logLine(result.missing_skills.length + " missing skills dispatched to your to-do list.", "dim-line");
 
+    var jobSkills = result.matched_skills.slice(0, 5);
+    if (!jobSkills.length) jobSkills = result.required_skills.slice(0, 5);
+    loadJobs(jobSkills);
+
     detailsEl.classList.add("show");
     document.getElementById("results").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   }
@@ -869,6 +947,190 @@
     engineNode.classList.toggle("processing", on);
     if (on) document.getElementById("verdict").textContent = "processing";
   }
+
+  /* ---------- Resume file upload (PDF / DOCX / TXT) ---------- */
+  var uploadBtn = document.getElementById("upload-btn");
+  var fileInput = document.getElementById("resume-file");
+  var uploadName = document.getElementById("upload-name");
+
+  uploadBtn.addEventListener("click", function () { fileInput.click(); });
+
+  function setResumeText(text, fileName) {
+    resumeEl.value = text;
+    refreshCounts();
+    uploadName.textContent = fileName + " · " + text.length.toLocaleString("en-US") + " characters extracted";
+    logLine("resume uploaded — " + fileName + " (" + text.length + " characters extracted).", "dim-line");
+  }
+
+  function readTextFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result || "")); };
+      reader.onerror = function () { reject(new Error("could not read the file")); };
+      reader.readAsText(file);
+    });
+  }
+
+  function readPdfFile(file) {
+    if (typeof window.pdfjsLib === "undefined") {
+      return Promise.reject(new Error("PDF reader did not load — check your connection, or paste the text instead"));
+    }
+    var pdfjs = window.pdfjsLib;
+    pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    return file.arrayBuffer().then(function (buffer) {
+      return pdfjs.getDocument({ data: buffer }).promise;
+    }).then(function (pdf) {
+      var pages = [];
+      for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
+      return pages.reduce(function (chain, pageNum) {
+        return chain.then(function (texts) {
+          return pdf.getPage(pageNum).then(function (page) {
+            return page.getTextContent().then(function (content) {
+              texts.push(content.items.map(function (item) { return item.str; }).join(" "));
+              return texts;
+            });
+          });
+        });
+      }, Promise.resolve([]));
+    }).then(function (texts) { return texts.join("\n"); });
+  }
+
+  function readDocxFile(file) {
+    if (typeof window.mammoth === "undefined") {
+      return Promise.reject(new Error("DOCX reader did not load — check your connection, or paste the text instead"));
+    }
+    return file.arrayBuffer().then(function (buffer) {
+      return window.mammoth.extractRawText({ arrayBuffer: buffer });
+    }).then(function (result) { return result.value || ""; });
+  }
+
+  fileInput.addEventListener("change", function () {
+    var file = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if (!file) return;
+    var name = file.name || "resume";
+    var ext = name.split(".").pop().toLowerCase();
+    var promise;
+    if (ext === "txt" || ext === "md") promise = readTextFile(file);
+    else if (ext === "pdf") promise = readPdfFile(file);
+    else if (ext === "docx") promise = readDocxFile(file);
+    else {
+      showError("That file type is not supported — upload a PDF, DOCX or TXT resume.");
+      return;
+    }
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "Reading…";
+    promise.then(function (text) {
+      text = (text || "").trim();
+      if (!text) {
+        showError("No text could be read from " + name + " — it may be a scanned image. Paste the text instead.");
+        return;
+      }
+      clearError();
+      setResumeText(text, name);
+    }).catch(function (err) {
+      showError("Could not read " + name + " (" + err.message + "). Paste the text instead.");
+      logLine("upload failed — " + err.message, "ok-line");
+    }).finally(function () {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = "Upload resume file";
+    });
+  });
+
+  /* ---------- Live jobs ---------- */
+  var lastJobSkills = [];
+  var jobsGrid = document.getElementById("jobs-grid");
+  var jobsStatus = document.getElementById("jobs-status");
+  var jobsUpdated = document.getElementById("jobs-updated");
+  var jobsRefresh = document.getElementById("jobs-refresh");
+
+  function formatPosted(postedAt) {
+    if (!postedAt) return "";
+    var d = new Date(postedAt);
+    if (isNaN(d.getTime())) return postedAt;
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function jobCard(job) {
+    var card = document.createElement("article");
+    card.className = "job";
+    var title = document.createElement("a");
+    title.className = "job-title";
+    title.href = job.url;
+    title.target = "_blank";
+    title.rel = "noopener";
+    title.textContent = job.title;
+    card.appendChild(title);
+    var meta = document.createElement("div");
+    meta.className = "job-meta";
+    meta.textContent = [job.company, job.location].filter(Boolean).join(" · ");
+    card.appendChild(meta);
+    var tags = (job.tags || []).slice(0, 4);
+    if (tags.length) {
+      var chips = document.createElement("ul");
+      chips.className = "chips";
+      tags.forEach(function (t) {
+        var li = document.createElement("li");
+        li.textContent = t;
+        chips.appendChild(li);
+      });
+      card.appendChild(chips);
+    }
+    if (job.snippet) {
+      var snip = document.createElement("div");
+      snip.className = "job-meta";
+      snip.textContent = job.snippet;
+      card.appendChild(snip);
+    }
+    var foot = document.createElement("div");
+    foot.className = "job-foot";
+    var left = document.createElement("span");
+    left.textContent = [formatPosted(job.posted_at), job.source].filter(Boolean).join(" · ");
+    var apply = document.createElement("a");
+    apply.className = "apply";
+    apply.href = job.url;
+    apply.target = "_blank";
+    apply.rel = "noopener";
+    apply.textContent = "Apply →";
+    foot.appendChild(left);
+    foot.appendChild(apply);
+    card.appendChild(foot);
+    return card;
+  }
+
+  function loadJobs(skills) {
+    if (!skills || !skills.length) {
+      jobsStatus.textContent = "No matched skills yet — run a match first.";
+      return;
+    }
+    lastJobSkills = skills.slice();
+    jobsStatus.textContent = "Searching live job boards for " + skills.join(", ") + "…";
+    jobsGrid.innerHTML = "";
+    logLine("searching live job boards for " + skills.join(", ") + "…", "blue-line");
+    fetch("/api/jobs?skills=" + encodeURIComponent(skills.join(",")) + "&limit=8")
+      .then(function (resp) {
+        if (!resp.ok) throw new Error("Server returned " + resp.status);
+        return resp.json();
+      })
+      .then(function (data) {
+        var list = data.jobs || [];
+        jobsUpdated.textContent = "updated " + new Date(data.fetched_at || Date.now()).toLocaleTimeString("en-GB", { hour12: false });
+        if (!list.length) {
+          jobsStatus.textContent = "No live matches for these skills right now — try Refresh in a bit.";
+          logLine("live jobs: no matches right now.", "dim-line");
+          return;
+        }
+        jobsStatus.textContent = list.length + " live " + (list.length === 1 ? "job" : "jobs") + " matching your skills.";
+        list.forEach(function (job) { jobsGrid.appendChild(jobCard(job)); });
+        logLine("live jobs: found " + list.length + " matching " + skills.join(", ") + ".", "ok-line");
+      })
+      .catch(function (err) {
+        jobsStatus.textContent = "Live job boards did not respond (" + err.message + ") — your match still works. Try Refresh.";
+        logLine("live jobs unavailable — " + err.message, "ok-line");
+      });
+  }
+
+  jobsRefresh.addEventListener("click", function () { loadJobs(lastJobSkills); });
 
   analyzeBtn.addEventListener("click", function () {
     clearError();
